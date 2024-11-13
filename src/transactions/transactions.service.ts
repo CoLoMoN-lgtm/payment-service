@@ -1,48 +1,60 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma.service';
-import { CreateTransactionDto, PartialPaymentDto } from './dto';
-import { TransactionStatus } from './transaction-status.enum';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class TransactionsService {
   constructor(private prisma: PrismaService) {}
 
-  async initializeTransaction(data: CreateTransactionDto) {
+  async initializeTransaction(amount: number) {
     return this.prisma.transaction.create({
       data: {
-        amount: data.amount,
-        status: TransactionStatus.PENDING,
+        amount,
+        isComplete: false,
       },
     });
   }
 
-  async partialPayment(transactionId: string, data: PartialPaymentDto) {
+  async addPayment(transactionId: string, paymentAmount: number) {
     const transaction = await this.prisma.transaction.findUnique({
       where: { id: transactionId },
     });
-
-    if (!transaction) {
-      throw new Error('Transaction not found');
+    
+    if (!transaction || transaction.isComplete) {
+      throw new NotFoundException('Транзакція не знайдена або вже завершена');
     }
 
-    const updatedPaidAmount = transaction.paidAmount + data.amount;
     await this.prisma.payment.create({
       data: {
-        amount: data.amount,
         transactionId,
+        amount: paymentAmount,
       },
     });
 
-    const isCompleted = updatedPaidAmount >= transaction.amount;
-
-    await this.prisma.transaction.update({
-      where: { id: transactionId },
-      data: {
-        paidAmount: updatedPaidAmount,
-        status: isCompleted ? TransactionStatus.COMPLETED : TransactionStatus.PENDING,
-      },
+    const payments = await this.prisma.payment.findMany({
+      where: { transactionId },
+      select: { amount: true },
     });
+    const totalPaid = payments.reduce((sum, payment) => sum + payment.amount, 0);
 
-    return isCompleted ? 'Transaction completed' : 'Partial payment accepted';
+    if (totalPaid >= transaction.amount) {
+      await this.prisma.transaction.update({
+        where: { id: transactionId },
+        data: { isComplete: true },
+      });
+    }
+
+    return { totalPaid, isComplete: totalPaid >= transaction.amount };
+  }
+
+  async getTransactionById(id: string) {
+    const transaction = await this.prisma.transaction.findUnique({
+      where: { id },
+    });
+    
+    if (!transaction) {
+      throw new NotFoundException('Транзакція не знайдена');
+    }
+
+    return transaction;
   }
 }
