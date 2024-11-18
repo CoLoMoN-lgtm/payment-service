@@ -1,22 +1,19 @@
-import { Injectable } from '@nestjs/common';
 import { Module } from '@nestjs/common';
-import { PrismaModule } from './prisma/prisma.module';
 import { TransactionsModule } from './transactions/transactions.module';
-import { PinoLogger } from 'nestjs-pino';
+import { LoggerModule } from 'nestjs-pino';
 
 @Module({
-  imports: [PrismaModule, TransactionsModule], 
+  imports: [
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.LOG_LEVEL || 'info',
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { colorize: true } }
+            : undefined,
+      },
+    }),
+    TransactionsModule,
+  ],
 })
 export class AppModule {}
-
-@Injectable()
-export class AppService {
-  constructor(private readonly logger: PinoLogger) {}
-
-  getHello(): string {
-    this.logger.info('Викликається метод getHello у AppService'); // Лог перед виконанням
-    const message = 'Hello World!';
-    this.logger.info({ message }, 'Метод getHello у AppService завершив виконання'); // Лог результату
-    return message;
-  }
-}

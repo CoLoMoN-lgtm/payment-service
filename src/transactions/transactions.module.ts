@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
-import { TransactionsService } from './transactions.service';
 import { TransactionsController } from './transactions.controller';
-import { PrismaModule } from '../prisma/prisma.module'; // Імпортуємо PrismaModule
+import { TransactionsService } from './transactions.service';
+import { LoggerModule } from 'nestjs-pino';
+import { PrismaModule } from '../prisma/prisma.module'; 
 
 @Module({
-  imports: [PrismaModule], // Додаємо PrismaModule до імпортів
-  providers: [TransactionsService],
+  imports: [LoggerModule.forRoot(), PrismaModule], 
   controllers: [TransactionsController],
+  providers: [TransactionsService],
 })
 export class TransactionsModule {}

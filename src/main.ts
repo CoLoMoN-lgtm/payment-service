@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    bufferLogs: true, // Буферизація логів для використання кастомного логера
+    bufferLogs: true, 
   });
 
   // Створення PinoLogger
@@ -27,10 +27,10 @@ async function bootstrap() {
     },
   });
 
-  // Ініціалізація Logger з підтримкою Pino
+  
   app.useLogger(
     new Logger(pinoLogger, {
-      renameContext: 'app', // Додавання контексту до логів (рядкове значення)
+      renameContext: 'app', 
     }),
   );
 
@@ -44,7 +44,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Запуск додатку
+
   await app.listen(3000);
 }
 bootstrap();
